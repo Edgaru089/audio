@@ -59,7 +59,7 @@ type SoundFileReader interface {
 	//
 	// If sampleOffset is greater than the number of samples in the file,
 	// this function must jump to the end of the file.
-	Seek(sampleOffset int64)
+	Seek(sampleOffset int64) error
 
 	// Read reads audio samples from the open file.
 	//
@@ -67,7 +67,7 @@ type SoundFileReader interface {
 	//
 	// The returned number of samples read may be smaller than len(data).
 	// This should not be considered as an error only on EOF.
-	Read(data []int16) (samplesRead int64)
+	Read(data []int16) (samplesRead int64, err error)
 
 	// The reader needs to be closed after use.
 	io.Closer

@@ -66,10 +66,12 @@ func (r *SoundFileReaderFLAC) Info() audio.SoundFileInfo {
 	return r.info
 }
 
-func (r *SoundFileReaderFLAC) Seek(sampleOffset int64) {
+func (r *SoundFileReaderFLAC) Seek(sampleOffset int64) error {
 	if r.decoder == nil {
 		panic("flac: call Seek on nil Reader")
 	}
+
+	r.err = nil
 
 	// clear the read buffer and the leftover
 	// the seek operation will trigger a read of one frame
@@ -89,12 +91,16 @@ func (r *SoundFileReaderFLAC) Seek(sampleOffset int64) {
 		// clear the leftover buffer
 		r.leftoverBuffer = r.leftoverBuffer[:0]
 	}
+
+	return r.err
 }
 
-func (r *SoundFileReaderFLAC) Read(data []int16) (samplesRead int64) {
+func (r *SoundFileReaderFLAC) Read(data []int16) (samplesRead int64, err error) {
 	if r.decoder == nil {
 		panic("flac: call Read on nil Reader")
 	}
+
+	r.err = nil
 
 	// if the leftover is not empty, use that first
 	if len(r.leftoverBuffer) > 0 {
@@ -106,7 +112,7 @@ func (r *SoundFileReaderFLAC) Read(data []int16) (samplesRead int64) {
 			copy(r.leftoverBuffer, r.leftoverBuffer[len(data):])
 			r.leftoverBuffer = r.leftoverBuffer[:len(r.leftoverBuffer)-len(data)]
 
-			return int64(len(data))
+			return int64(len(data)), nil
 		} else {
 			// copy all of leftover and then decode new frames
 			copy(data, r.leftoverBuffer)
@@ -131,7 +137,7 @@ func (r *SoundFileReaderFLAC) Read(data []int16) (samplesRead int64) {
 		}
 	}
 
-	return int64(r.alreadyRead)
+	return int64(r.alreadyRead), r.err
 }
 
 func (r *SoundFileReaderFLAC) Close() error {
