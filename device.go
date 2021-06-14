@@ -27,6 +27,8 @@ func initDevice() (err error) {
 		return errors.New("failed to create audio context")
 	}
 
+	C.alcMakeContextCurrent(alcContext)
+
 	orientation := []float32{
 		listenerDirection[0], listenerDirection[1], listenerDirection[2],
 		listenerUpVector[0], listenerUpVector[1], listenerUpVector[2],
