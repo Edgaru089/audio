@@ -21,10 +21,12 @@ func __GoAudioFLAC_StreamRead(
 	streamDecoder uintptr,
 	buffer *byte,
 	size *C.size_t,
-	clientData unsafe.Pointer,
+	clientData uintptr,
 ) C.FLAC__StreamDecoderReadStatus {
 
-	reader := (*SoundFileReaderFLAC)(clientData)
+	lock.RLock()
+	reader := readers[int(clientData)]
+	lock.RUnlock()
 
 	// Let's construct a slice for simplcity
 	bhead := &reflect.SliceHeader{
@@ -46,8 +48,10 @@ func __GoAudioFLAC_StreamRead(
 }
 
 //export __GoAudioFLAC_StreamSeek
-func __GoAudioFLAC_StreamSeek(streamDecoder uintptr, offset int64, clientData unsafe.Pointer) C.FLAC__StreamDecoderSeekStatus {
-	reader := (*SoundFileReaderFLAC)(clientData)
+func __GoAudioFLAC_StreamSeek(streamDecoder uintptr, offset int64, clientData uintptr) C.FLAC__StreamDecoderSeekStatus {
+	lock.RLock()
+	reader := readers[int(clientData)]
+	lock.RUnlock()
 	_, err := reader.file.Seek(offset, io.SeekStart)
 	if err != nil {
 		return C.FLAC__STREAM_DECODER_SEEK_STATUS_ERROR
@@ -56,8 +60,10 @@ func __GoAudioFLAC_StreamSeek(streamDecoder uintptr, offset int64, clientData un
 }
 
 //export __GoAudioFLAC_StreamTell
-func __GoAudioFLAC_StreamTell(streamDecoder uintptr, offset *uint64, clientData unsafe.Pointer) C.FLAC__StreamDecoderTellStatus {
-	reader := (*SoundFileReaderFLAC)(clientData)
+func __GoAudioFLAC_StreamTell(streamDecoder uintptr, offset *uint64, clientData uintptr) C.FLAC__StreamDecoderTellStatus {
+	lock.RLock()
+	reader := readers[int(clientData)]
+	lock.RUnlock()
 	i, err := reader.file.Seek(0, io.SeekCurrent)
 	if err != nil {
 		return C.FLAC__STREAM_DECODER_TELL_STATUS_ERROR
@@ -67,8 +73,10 @@ func __GoAudioFLAC_StreamTell(streamDecoder uintptr, offset *uint64, clientData 
 }
 
 //export __GoAudioFLAC_StreamLength
-func __GoAudioFLAC_StreamLength(streamDecoder uintptr, length *uint64, clientData unsafe.Pointer) C.FLAC__StreamDecoderLengthStatus {
-	reader := (*SoundFileReaderFLAC)(clientData)
+func __GoAudioFLAC_StreamLength(streamDecoder uintptr, length *uint64, clientData uintptr) C.FLAC__StreamDecoderLengthStatus {
+	lock.RLock()
+	reader := readers[int(clientData)]
+	lock.RUnlock()
 
 	// previous position
 	prev, err := reader.file.Seek(0, io.SeekCurrent)
@@ -93,8 +101,10 @@ func __GoAudioFLAC_StreamLength(streamDecoder uintptr, length *uint64, clientDat
 }
 
 //export __GoAudioFLAC_StreamEOF
-func __GoAudioFLAC_StreamEOF(streamDecoder uintptr, clientData unsafe.Pointer) C.FLAC__bool {
-	reader := (*SoundFileReaderFLAC)(clientData)
+func __GoAudioFLAC_StreamEOF(streamDecoder uintptr, clientData uintptr) C.FLAC__bool {
+	lock.RLock()
+	reader := readers[int(clientData)]
+	lock.RUnlock()
 
 	// previous position
 	prev, err := reader.file.Seek(0, io.SeekCurrent)
@@ -139,9 +149,11 @@ func __GoAudioFLAC_StreamWrite(
 	streamDecoder uintptr,
 	frame *C.FLAC__Frame,
 	buffer uintptr,
-	clientData unsafe.Pointer,
+	clientData uintptr,
 ) C.FLAC__StreamDecoderWriteStatus {
-	reader := (*SoundFileReaderFLAC)(clientData)
+	lock.RLock()
+	reader := readers[int(clientData)]
+	lock.RUnlock()
 
 	// sample count in this frame
 	_ = int(frame.header.blocksize * frame.header.channels)
@@ -178,19 +190,23 @@ func __GoAudioFLAC_StreamWrite(
 // meta.type is to be read, but type is a keyword in Go?!
 // We need to wrap it around
 //export __GoAudioFLAC_StreamMetadata
-func __GoAudioFLAC_StreamMetadata(clientData unsafe.Pointer, sampleCount int64, channelCount, sampleRate int32) {
-	reader := (*SoundFileReaderFLAC)(clientData)
+func __GoAudioFLAC_StreamMetadata(clientData uintptr, sampleCount int64, channelCount, sampleRate int32) {
+	lock.RLock()
+	reader := readers[int(clientData)]
+	lock.RUnlock()
 
 	reader.info = audio.SoundFileInfo{
 		SampleCount:  sampleCount,
 		ChannelCount: int(channelCount),
-		SampleRate:   int(sampleCount),
+		SampleRate:   int(sampleRate),
 	}
 }
 
 //export __GoAudioFLAC_StreamError
-func __GoAudioFLAC_StreamError(streamDecoder uintptr, status C.FLAC__StreamDecoderErrorStatus, clientData unsafe.Pointer) {
-	reader := (*SoundFileReaderFLAC)(clientData)
+func __GoAudioFLAC_StreamError(streamDecoder uintptr, status C.FLAC__StreamDecoderErrorStatus, clientData uintptr) {
+	lock.RLock()
+	reader := readers[int(clientData)]
+	lock.RUnlock()
 
 	reader.err = fmt.Errorf("flac decode error: %s", C.GoString(C.__GoAudioFLAC_C_StreamDecoderErrorStatusString(status)))
 

@@ -9,8 +9,8 @@ void __GoAudioFLAC_C_StreamMetadata(const FLAC__StreamDecoder* decoder, const FL
 		__GoAudioFLAC_StreamMetadata(
 			clientData,
 			meta->data.stream_info.total_samples * meta->data.stream_info.channels,
-			meta->data.stream_info.sample_rate,
-			meta->data.stream_info.channels
+			meta->data.stream_info.channels,
+			meta->data.stream_info.sample_rate
 		);
 	}
 }

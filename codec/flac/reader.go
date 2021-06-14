@@ -8,12 +8,15 @@ import "C"
 import (
 	"errors"
 	"io"
+	"sync"
 	"unsafe"
 
 	"github.com/Edgaru089/audio"
 )
 
 type SoundFileReaderFLAC struct {
+	id int
+
 	decoder *C.FLAC__StreamDecoder
 
 	file io.ReadSeeker
@@ -34,11 +37,24 @@ var Magic = []byte("fLaC")
 // SoundFileCheckFLAC is the check function of the FLAC format.
 var SoundFileCheckFLAC = audio.SoundFileCheckMagic(Magic, 0)
 
+var (
+	readers map[int]*SoundFileReaderFLAC
+	rid     int
+	lock    sync.RWMutex
+)
+
 func init() {
+	readers = make(map[int]*SoundFileReaderFLAC)
+
 	audio.RegisterSoundFileReader(
 		SoundFileCheckFLAC,
 		func() audio.SoundFileReader {
-			return &SoundFileReaderFLAC{}
+			lock.Lock()
+			defer lock.Unlock()
+			reader := &SoundFileReaderFLAC{id: rid}
+			readers[rid] = reader
+			rid++
+			return reader
 		},
 	)
 }
@@ -51,12 +67,13 @@ func (r *SoundFileReaderFLAC) Open(file io.ReadSeeker) (info audio.SoundFileInfo
 	}
 
 	r.file = file
-	C.__GoAudioFLAC_C_InitStream(r.decoder, unsafe.Pointer(r))
+	C.__GoAudioFLAC_C_InitStream(r.decoder, unsafe.Pointer(uintptr(r.id)))
 
 	// read the header, FALSE if error
 	if C.FLAC__stream_decoder_process_until_end_of_metadata(r.decoder) != 1 {
 		r.Close()
 		err = errors.New("failed to open FLAC file (failed to read metadata)")
+		return
 	}
 
 	return r.info, nil
@@ -146,5 +163,9 @@ func (r *SoundFileReaderFLAC) Close() error {
 		C.FLAC__stream_decoder_delete(r.decoder)
 		r.decoder = nil
 	}
+
+	lock.Lock()
+	defer lock.Unlock()
+	delete(readers, r.id)
 	return nil
 }
