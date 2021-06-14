@@ -142,6 +142,8 @@ func readBuffer(buffer uintptr, i, j int) int32 {
 	bufferaddr = nextdim + uintptr(j)*unsafe.Sizeof(int32(0))
 	// dereference
 	return *((*int32)(unsafe.Pointer(bufferaddr)))
+
+	//return int32(C.__GoAudioFLAC_C_IndexBuffer(unsafe.Pointer(buffer), C.int64_t(i), C.int64_t(j)))
 }
 
 //export __GoAudioFLAC_StreamWrite
@@ -166,11 +168,11 @@ func __GoAudioFLAC_StreamWrite(
 			case 8:
 				sample = readBuffer(buffer, j, i) << 8
 			case 16:
-				sample = readBuffer(buffer, j, i) << 8
+				sample = readBuffer(buffer, j, i)
 			case 24:
-				sample = readBuffer(buffer, j, i) << 8
+				sample = readBuffer(buffer, j, i) >> 8
 			case 32:
-				sample = readBuffer(buffer, j, i) << 8
+				sample = readBuffer(buffer, j, i) >> 16
 			default:
 				panic(fmt.Sprint("__GoAudioFLAC_StreamWrite: unsupported bits per sample: ", frame.header.bits_per_sample))
 			}
