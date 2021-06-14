@@ -49,6 +49,9 @@ type SoundFileReader interface {
 	// A single SoundFileReader instance should only call Open once.
 	Open(file io.ReadSeeker) (SoundFileInfo, error)
 
+	// Info returns the properities of the sound stream.
+	Info() SoundFileInfo
+
 	// Seek changes the read position to the given offset, relative to the beginning of the file.
 	//
 	// The sampleOffset can be computed from Time offset with the given formula:
@@ -80,7 +83,7 @@ var (
 // RegisterSoundFileReader registers a new SoundFileReader.
 //
 // the allocator function allocates a new instance, it should look like
-//     func () { return &Decoder }
+//     func () { return &Decoder{} }
 func RegisterSoundFileReader(check SoundFileCheck, allocator func() SoundFileReader) {
 	fileReaders = append(fileReaders, struct {
 		alloc func() SoundFileReader

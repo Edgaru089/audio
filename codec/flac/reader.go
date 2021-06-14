@@ -62,6 +62,10 @@ func (r *SoundFileReaderFLAC) Open(file io.ReadSeeker) (info audio.SoundFileInfo
 	return r.info, nil
 }
 
+func (r *SoundFileReaderFLAC) Info() audio.SoundFileInfo {
+	return r.info
+}
+
 func (r *SoundFileReaderFLAC) Seek(sampleOffset int64) {
 	if r.decoder == nil {
 		panic("flac: call Seek on nil Reader")
