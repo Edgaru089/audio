@@ -66,7 +66,7 @@ type SoundFileReader interface {
 	// The read data is written into the len() part of the data slice.
 	//
 	// The returned number of samples read may be smaller than len(data).
-	// This should not be considered as an error.
+	// This should not be considered as an error only on EOF.
 	Read(data []int16) (samplesRead int64)
 
 	// The reader needs to be closed after use.
