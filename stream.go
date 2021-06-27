@@ -132,6 +132,7 @@ func (s *SoundStream) Stop() {
 	if streaming {
 		<-s.stopped
 		close(s.stopped)
+		s.stopped = nil
 	}
 
 	s.seekOffset = 0
@@ -259,7 +260,7 @@ func (s *SoundStream) streamData() {
 		s.lock.Unlock()
 
 		// interrupted
-		if s.Status() == Stopped {
+		if s.soundSource.Status() == Stopped {
 			if !wantstop {
 				// just continue
 				C.alSourcePlay(s.source)
@@ -268,7 +269,6 @@ func (s *SoundStream) streamData() {
 				s.lock.Lock()
 				s.streaming = false
 				s.lock.Unlock()
-				break
 			}
 		}
 
@@ -329,6 +329,8 @@ func (s *SoundStream) streamData() {
 	if s.stopped != nil {
 		hasStopped = true
 	}
+	s.state = Stopped
+	s.streaming = false
 	s.lock.Unlock()
 
 	if hasStopped {
