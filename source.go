@@ -97,6 +97,7 @@ func (s *soundSource) SetAttenuation(attenuation float32) {
 	C.alSourcef(s.source, C.AL_ROLLOFF_FACTOR, C.float(attenuation))
 }
 
+// Status returns the current status of the sound stream.
 func (s *soundSource) Status() PlayStatus {
 	var status C.ALint
 	C.alGetSourcei(s.source, C.AL_SOURCE_STATE, &status)
