@@ -118,6 +118,7 @@ func (r *SoundFileReaderFLAC) Read(data []int16) (samplesRead int64, err error) 
 	}
 
 	r.err = nil
+	r.alreadyRead = 0
 
 	// if the leftover is not empty, use that first
 	if len(r.leftoverBuffer) > 0 {
@@ -150,6 +151,7 @@ func (r *SoundFileReaderFLAC) Read(data []int16) (samplesRead int64, err error) 
 
 		// break on EOF
 		if C.FLAC__stream_decoder_get_state(r.decoder) == C.FLAC__STREAM_DECODER_END_OF_STREAM {
+			r.err = io.EOF
 			break
 		}
 	}
