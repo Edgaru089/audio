@@ -84,7 +84,6 @@ func (s *SoundStream) Play() {
 	s.lock.Unlock()
 
 	if streaming {
-
 		if state == Paused {
 			s.lock.Lock()
 			s.state = Playing
@@ -109,6 +108,7 @@ func (s *SoundStream) Pause() {
 		s.lock.Unlock()
 		return
 	}
+	s.state = Paused
 	s.lock.Unlock()
 
 	C.alSourcePause(s.source)
