@@ -1,7 +1,6 @@
 package audio
 
 import (
-	"log"
 	"sync"
 	"time"
 	"unsafe"
@@ -117,7 +116,6 @@ func (s *SoundStream) Pause() {
 
 // Stop stops the sound streaming if playing.
 func (s *SoundStream) Stop() {
-	log.Print("stopping")
 
 	// signal and wait for the thread to terminate
 	var streaming bool
@@ -132,10 +130,8 @@ func (s *SoundStream) Stop() {
 	s.lock.Unlock()
 
 	if streaming {
-		log.Println("waiting for stop")
 		<-s.stopped
 		close(s.stopped)
-		log.Println("waiting for stop: ok")
 	}
 
 	s.seekOffset = 0
@@ -144,7 +140,6 @@ func (s *SoundStream) Stop() {
 		s.iface.Seek(0)
 	}
 
-	log.Print("stopped")
 }
 
 // SampleCount returns the number of samples in the buffer.
@@ -209,7 +204,6 @@ func (s *SoundStream) PlayingOffset() time.Duration {
 // It can be called when the sound is playing or paused.
 // Calling on a stopped sound has no effect.
 func (s *SoundStream) SetPlayingOffset(offset time.Duration) {
-	log.Print("seeking")
 
 	// stop the streaming, seek, and then start streaming again
 
@@ -217,8 +211,6 @@ func (s *SoundStream) SetPlayingOffset(offset time.Duration) {
 	if oldstatus == Stopped {
 		return
 	}
-
-	log.Printf("Old status %d (Stopped=0, Paused=1, Playing=2)", oldstatus)
 
 	s.Stop()
 
@@ -228,11 +220,9 @@ func (s *SoundStream) SetPlayingOffset(offset time.Duration) {
 	s.state = oldstatus
 	s.seekOffset = int64(offset.Seconds() * float64(s.info.ChannelCount) * float64(s.info.SampleRate))
 	go s.streamData()
-	log.Print("seek ok")
 }
 
 func (s *SoundStream) streamData() {
-	log.Print("log: running")
 
 	var wantstop bool
 
@@ -263,7 +253,6 @@ func (s *SoundStream) streamData() {
 	for {
 		s.lock.Lock()
 		if !s.streaming {
-			log.Print("breaking loop")
 			s.lock.Unlock()
 			break
 		}
@@ -272,11 +261,9 @@ func (s *SoundStream) streamData() {
 		// interrupted
 		if s.Status() == Stopped {
 			if !wantstop {
-				log.Print("loop: stopped: !wantstop, continuing")
 				// just continue
 				C.alSourcePlay(s.source)
 			} else {
-				log.Print("loop: stopped: wantstop, ending")
 				// end streaming
 				s.lock.Lock()
 				s.streaming = false
@@ -335,8 +322,6 @@ func (s *SoundStream) streamData() {
 	C.alSourcei(s.source, C.AL_BUFFER, 0)
 	C.alDeleteBuffers(SoundStreamBufferCount, &s.buffers[0])
 
-	log.Print("cleanup ok")
-
 	// signal stopped
 	var hasStopped bool
 	hasStopped = true
@@ -347,11 +332,8 @@ func (s *SoundStream) streamData() {
 	s.lock.Unlock()
 
 	if hasStopped {
-		log.Println("thread signaling")
 		s.stopped <- struct{}{}
-		log.Println("thread signaled")
 	}
-	log.Println("thread exiting")
 }
 
 // returns true if the new buffer reaches end of file
@@ -378,12 +360,6 @@ func (s *SoundStream) fillAndPushBuffer(num int) bool {
 		C.alSourceQueueBuffers(s.source, 1, &s.buffers[num])
 	} else {
 		wantstop = true
-	}
-
-	log.Printf("fillAndPush: #%d, len=%d", num, len(data))
-
-	if wantstop {
-		log.Print("fillAndPush: wantStop")
 	}
 
 	return wantstop
