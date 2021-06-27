@@ -21,7 +21,7 @@ func NewSound() *Sound {
 		s,
 		func(sound *Sound) {
 			C.alSourcei(sound.source, C.AL_BUFFER, 0)
-			C.alDeleteSources(1, &sound.source)
+			sound.soundSource.close()
 		},
 	)
 

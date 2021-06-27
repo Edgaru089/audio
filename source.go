@@ -18,8 +18,16 @@ type soundSource struct {
 }
 
 func (s *soundSource) init() {
-	C.alGenSources(1, &s.source)
-	C.alSourcei(s.source, C.AL_BUFFER, 0)
+	if s.source == 0 {
+		C.alGenSources(1, &s.source)
+		C.alSourcei(s.source, C.AL_BUFFER, 0)
+	}
+}
+
+func (s *soundSource) close() {
+	if s.source != 0 {
+		C.alDeleteSources(1, &s.source)
+	}
 }
 
 // SetPitch sets the pitch of the sound.

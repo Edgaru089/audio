@@ -67,6 +67,8 @@ type SoundFileReader interface {
 	//
 	// The returned number of samples read may be smaller than len(data).
 	// This should not be considered as an error only on EOF.
+	//
+	// On end-of-file, Read should return (0, io.EOF).
 	Read(data []int16) (samplesRead int64, err error)
 
 	// The reader needs to be closed after use.
