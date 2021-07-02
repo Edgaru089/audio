@@ -11,7 +11,6 @@ import "C"
 import (
 	"errors"
 	"io"
-	"log"
 	"sync"
 	"unsafe"
 
@@ -107,13 +106,10 @@ func (r *SoundFileReaderOgg) Read(data []int16) (samplesRead int64, err error) {
 
 	maxcount := int64(len(data))
 
-	log.Printf("Ogg: READ: maxcount=%d", maxcount)
-
 	for samplesRead < maxcount {
 
 		bytesToRead := (maxcount - samplesRead) * int64(unsafe.Sizeof(int16(0)))
 		bytesRead := int64(C.ov_read(r.vorbis, (*C.char)(unsafe.Pointer(&data[samplesRead])), C.int(bytesToRead), 0, 2, 1, nil))
-		//log.Printf("Ogg: READcycle: (samplesRead=%d, maxcount=%d) BytesToRead=%d, BytesRead=%d", samplesRead, maxcount, bytesToRead, bytesRead)
 		if bytesRead > 0 {
 			samples := bytesRead / int64(unsafe.Sizeof(int16(0)))
 			samplesRead += samples

@@ -7,7 +7,6 @@ package ogg
 import "C"
 import (
 	"io"
-	"log"
 	"reflect"
 	"unsafe"
 )
@@ -32,7 +31,6 @@ func __GoAudioOgg_Read(
 	b := *((*[]byte)(unsafe.Pointer(bhead)))
 
 	count, _ := reader.file.Read(b)
-	//log.Printf("Ogg: Read: %d * %d = %d, read %d", size, nmemb, size*nmemb, count)
 	if count > 0 {
 		return C.size_t(count)
 	} else {
@@ -56,7 +54,6 @@ func __GoAudioOgg_Seek(clientData uintptr, offset C.ogg_int64_t, whence C.int) C
 		goWhence = io.SeekEnd
 	}
 
-	log.Printf("Ogg: Seek: %d, whence=%d (0=SET, 1=CUR, 2=END)", offset, goWhence)
 	pos, err := reader.file.Seek(int64(offset), goWhence)
 	if err != nil {
 		return -1
@@ -70,7 +67,6 @@ func __GoAudioOgg_Tell(clientData uintptr) C.long {
 	reader := readers[int(clientData)]
 	lock.RUnlock()
 
-	log.Print("Ogg: Tell")
 	i, err := reader.file.Seek(0, io.SeekCurrent)
 	if err != nil {
 		return -1
