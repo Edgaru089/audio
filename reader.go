@@ -2,7 +2,9 @@ package audio
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"time"
 )
 
 // SoundFileInfo contains the properities of a audio file.
@@ -10,6 +12,19 @@ type SoundFileInfo struct {
 	SampleCount  int64 // Total numbers of samples in the file
 	ChannelCount int   // Numbers of channels in the file
 	SampleRate   int   // Sample rate of the file, in samples per second
+}
+
+func (s SoundFileInfo) String() string {
+	if s.SampleRate == 0 {
+		return fmt.Sprintf("[SampleCount=%d, SampleRate=%d, ChannelCount=%d]", s.SampleCount, s.SampleRate, s.ChannelCount)
+	}
+	return fmt.Sprintf(
+		"[SampleCount=%d, SampleRate=%d (Duration=%v), ChannelCount=%d]",
+		s.SampleCount,
+		s.SampleRate,
+		time.Duration(float64(time.Second)*float64(s.SampleCount)/float64(s.ChannelCount)/float64(s.SampleRate)),
+		s.ChannelCount,
+	)
 }
 
 // SoundFileCheck is called to tell if the given file can be handled by a codec.
