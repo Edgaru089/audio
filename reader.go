@@ -9,7 +9,7 @@ import (
 
 // SoundFileInfo contains the properities of a audio file.
 type SoundFileInfo struct {
-	SampleCount  int64 // Total numbers of samples in the file
+	SampleCount  int64 // Total numbers of samples in the file, 2 channels count as 2
 	ChannelCount int   // Numbers of channels in the file
 	SampleRate   int   // Sample rate of the file, in samples per second
 }
