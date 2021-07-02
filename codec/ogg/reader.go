@@ -11,6 +11,7 @@ import "C"
 import (
 	"errors"
 	"io"
+	"log"
 	"sync"
 	"unsafe"
 
@@ -35,7 +36,7 @@ var SoundFileCheckOgg = audio.SoundFileCheckMagic(Magic, 0)
 
 var (
 	readers map[int]*SoundFileReaderOgg
-	rid     int
+	rid     int = 1
 	lock    sync.RWMutex
 )
 
@@ -63,9 +64,9 @@ func (r *SoundFileReaderOgg) Open(file io.ReadSeeker) (info audio.SoundFileInfo,
 	}
 
 	vinfo := C.ov_info(r.vorbis, -1)
-	info.SampleCount = int64(C.ov_pcm_total(r.vorbis, -1) * C.ogg_int64_t(vinfo.channels))
-	info.ChannelCount = int(vinfo.channels)
-	info.SampleRate = int(vinfo.rate)
+	r.info.SampleCount = int64(C.ov_pcm_total(r.vorbis, -1) * C.ogg_int64_t(vinfo.channels))
+	r.info.ChannelCount = int(vinfo.channels)
+	r.info.SampleRate = int(vinfo.rate)
 
 	return r.info, nil
 }
@@ -106,15 +107,28 @@ func (r *SoundFileReaderOgg) Read(data []int16) (samplesRead int64, err error) {
 
 	maxcount := int64(len(data))
 
+	log.Printf("Ogg: READ: maxcount=%d", maxcount)
+
 	for samplesRead < maxcount {
 
 		bytesToRead := (maxcount - samplesRead) * int64(unsafe.Sizeof(int16(0)))
 		bytesRead := int64(C.ov_read(r.vorbis, (*C.char)(unsafe.Pointer(&data[samplesRead])), C.int(bytesToRead), 0, 2, 1, nil))
+		//log.Printf("Ogg: READcycle: (samplesRead=%d, maxcount=%d) BytesToRead=%d, BytesRead=%d", samplesRead, maxcount, bytesToRead, bytesRead)
 		if bytesRead > 0 {
 			samples := bytesRead / int64(unsafe.Sizeof(int16(0)))
 			samplesRead += samples
-		} else {
+		} else if bytesRead == 0 {
 			return samplesRead, io.EOF
+		} else {
+			// error condition: https://xiph.org/vorbis/doc/vorbisfile/ov_read.html
+			switch bytesRead {
+			case C.OV_HOLE:
+				return samplesRead, errors.New("ogg: Read: there was an interruption in the data (garbage between pages, loss of sync followed by recapture, or a corrupt page)")
+			case C.OV_EBADLINK:
+				return samplesRead, errors.New("ogg: Read: an invalid stream section was supplied to libvorbisfile, or the requested link is corrupt.")
+			case C.OV_EINVAL:
+				return samplesRead, errors.New("ogg: Read: initial file headers couldn't be read or are corrupt, or the initial open call for vf failed.")
+			}
 		}
 	}
 

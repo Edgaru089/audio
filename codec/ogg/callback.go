@@ -32,7 +32,7 @@ func __GoAudioOgg_Read(
 	b := *((*[]byte)(unsafe.Pointer(bhead)))
 
 	count, _ := reader.file.Read(b)
-	log.Printf("Ogg: Read: %d * %d = %d, read %d", size, nmemb, size*nmemb, count)
+	//log.Printf("Ogg: Read: %d * %d = %d, read %d", size, nmemb, size*nmemb, count)
 	if count > 0 {
 		return C.size_t(count)
 	} else {
@@ -56,7 +56,7 @@ func __GoAudioOgg_Seek(clientData uintptr, offset C.ogg_int64_t, whence C.int) C
 		goWhence = io.SeekEnd
 	}
 
-	log.Printf("Ogg: Seek: %d", offset)
+	log.Printf("Ogg: Seek: %d, whence=%d (0=SET, 1=CUR, 2=END)", offset, goWhence)
 	pos, err := reader.file.Seek(int64(offset), goWhence)
 	if err != nil {
 		return -1
