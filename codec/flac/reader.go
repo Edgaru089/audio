@@ -39,7 +39,7 @@ var SoundFileCheckFLAC = audio.SoundFileCheckMagic(Magic, 0)
 
 var (
 	readers map[int]*SoundFileReaderFLAC
-	rid     int
+	rid     int = 1
 	lock    sync.RWMutex
 )
 
