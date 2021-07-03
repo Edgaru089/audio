@@ -26,7 +26,7 @@ type SoundFileReaderWave struct {
 	file io.ReadSeeker
 	info audio.SoundFileInfo
 
-	bitsPerSample          int
+	bytesPerSample         int
 	dataOffset, dataLength int64
 	readOffset             int64 // current read position, relative to dataOffset
 }
@@ -164,7 +164,7 @@ func (r *SoundFileReaderWave) Open(file io.ReadSeeker) (info audio.SoundFileInfo
 
 			info.ChannelCount = int(numChannels)
 			info.SampleRate = int(sampleRate)
-			r.bitsPerSample = int(bitsPerSample)
+			r.bytesPerSample = int(bitsPerSample / 8)
 
 		case DataHeader:
 			// the "data" chunk
@@ -176,7 +176,7 @@ func (r *SoundFileReaderWave) Open(file io.ReadSeeker) (info audio.SoundFileInfo
 
 			r.dataOffset = chunkOffset
 			r.dataLength = chunkSize
-			info.SampleCount = chunkSize / (int64(r.bitsPerSample / 8))
+			info.SampleCount = chunkSize / int64(r.bytesPerSample)
 		}
 
 		// for whatever chunk, seek to the next chunk position
@@ -198,7 +198,7 @@ func (r *SoundFileReaderWave) Open(file io.ReadSeeker) (info audio.SoundFileInfo
 		return info, errors.New("Wave: Audio format error (no FMT or DATA subchunk)")
 	}
 
-	log.Printf("Wave: Asylum: info=%v, bits=%d", info, r.bitsPerSample)
+	log.Printf("Wave: Asylum: info=%v, bits=%d", info, r.bytesPerSample*8)
 
 	// seek to the beginning of the data
 	file.Seek(r.dataOffset, io.SeekStart)
@@ -214,28 +214,27 @@ func (r *SoundFileReaderWave) Info() audio.SoundFileInfo {
 }
 
 func (r *SoundFileReaderWave) Seek(sampleOffset int64) error {
-	r.readOffset = sampleOffset * int64(r.bitsPerSample/8)
+	r.readOffset = sampleOffset * int64(r.bytesPerSample)
 	_, err := r.file.Seek(r.dataOffset+r.readOffset, io.SeekStart)
 	return err
 }
 
-// reads from file BITS bits, then decode the first 16 bits.
-func readcode16(file io.ReadSeeker, bits int) (val16 int16, err error) {
-	var buf [8]byte
-	_, err = file.Read(buf[:bits/8])
+// reads from file BYTES bytes, then decode the first 16 bits.
+func readcode16(file io.ReadSeeker, bytes int) (val16 int16, err error) {
+	var buf [4]byte
+	_, err = file.Read(buf[:bytes])
 	if err != nil {
 		return
 	}
 
-	var value int64
-	switch bits {
-	case 8:
-		value = int64(buf[0]) << 8
-	case 16, 24, 32:
-		value = int64(buf[0]) | int64(buf[1])<<8
+	switch bytes {
+	case 1: // 8-bit
+		val16 = int16(buf[0]) << 8
+	case 2, 3, 4: // 16, 24 and 32-bit
+		val16 = int16(buf[0]) | int16(buf[1])<<8
 	}
 
-	return int16(value), nil
+	return
 }
 
 func (r *SoundFileReaderWave) Read(data []int16) (samplesRead int64, err error) {
@@ -244,20 +243,26 @@ func (r *SoundFileReaderWave) Read(data []int16) (samplesRead int64, err error) 
 
 	t := time.Now()
 
-	for samplesRead < int64(len(data)) && r.readOffset < r.dataLength {
+	if r.bytesPerSample == 1 { // 8-bit
 
-		data[samplesRead], err = readcode16(r.file, r.bitsPerSample)
-		if err != nil {
-			return
+		for samplesRead < int64(len(data)) && r.readOffset < r.dataLength {
+
+			data[samplesRead], err = readcode16(r.file, r.bytesPerSample)
+			if err != nil {
+				return
+			}
+
+			samplesRead++
+			r.readOffset += int64(r.bytesPerSample)
+
+			if time.Since(t) > time.Millisecond*10 {
+				fmt.Printf("\rWave: Read over: samplesRead=%d, readOffset=%d (dataLength=%d)", samplesRead, r.readOffset, r.dataLength)
+				t = time.Now()
+			}
 		}
 
-		samplesRead++
-		r.readOffset += int64(r.bitsPerSample / 8)
-
-		if time.Since(t) > time.Millisecond*10 {
-			fmt.Printf("\rWave: Read over: samplesRead=%d, readOffset=%d (dataLength=%d)", samplesRead, r.readOffset, r.dataLength)
-			t = time.Now()
-		}
+	} else if r.bytesPerSample == 2 { // 16-bit
+		return r.read16(data) // use some dirty stuff to speed it up on little-endian systems
 	}
 
 	log.Printf("Wave: Read over: samplesRead=%d, readOffset=%d (dataLength=%d)", samplesRead, r.readOffset, r.dataLength)
