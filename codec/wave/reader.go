@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/Edgaru089/audio"
@@ -122,8 +121,6 @@ func (r *SoundFileReaderWave) Open(file io.ReadSeeker) (info audio.SoundFileInfo
 			goto endloop
 		}
 
-		log.Printf(`Wave: Subchunk Name="%s", Offset=%d, Length=%d`, name, chunkOffset, chunkSize)
-
 		switch string(name[:]) {
 		case WaveHeader:
 			// the "fmt " chunk
@@ -185,7 +182,6 @@ func (r *SoundFileReaderWave) Open(file io.ReadSeeker) (info audio.SoundFileInfo
 		continue
 
 	endloop: // it's driving me nuts the restrictions, and, as a common knowledge, only those who're nuts use goto
-		log.Print("lunatic asylum")
 		err = nerr
 		break
 	}
@@ -197,8 +193,6 @@ func (r *SoundFileReaderWave) Open(file io.ReadSeeker) (info audio.SoundFileInfo
 	if info.ChannelCount == 0 || r.dataOffset == 0 {
 		return info, errors.New("Wave: Audio format error (no FMT or DATA subchunk)")
 	}
-
-	log.Printf("Wave: Asylum: info=%v, bits=%d", info, r.bytesPerSample*8)
 
 	// seek to the beginning of the data
 	file.Seek(r.dataOffset, io.SeekStart)
@@ -239,8 +233,6 @@ func readcode16(file io.ReadSeeker, bytes int) (val16 int16, err error) {
 
 func (r *SoundFileReaderWave) Read(data []int16) (samplesRead int64, err error) {
 
-	log.Printf("Wave: Reading: len(data)=%d, readOffset=%d (dataLength=%d)", len(data), r.readOffset, r.dataLength)
-
 	t := time.Now()
 
 	if r.bytesPerSample == 1 { // 8-bit
@@ -264,8 +256,6 @@ func (r *SoundFileReaderWave) Read(data []int16) (samplesRead int64, err error) 
 	} else if r.bytesPerSample == 2 { // 16-bit
 		return r.read16(data) // use some dirty stuff to speed it up on little-endian systems
 	}
-
-	log.Printf("Wave: Read over: samplesRead=%d, readOffset=%d (dataLength=%d)", samplesRead, r.readOffset, r.dataLength)
 
 	if samplesRead == int64(len(data)) {
 		// data is full, return success regardless of r.readOffset or EOF
