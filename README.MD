@@ -11,6 +11,8 @@ import "github.com/Edgaru089/audio"
 import _ "github.com/Edgaru089/audio/codec/flac"
 
 
+audio.Init() // Initialize OpenAL
+
 file, err := os.Open("Alstroemeria Records - Bad Apple!!.flac")
 
 b := audio.NewSoundBuffer() // a large buffer keeping all the audio samples in memory
